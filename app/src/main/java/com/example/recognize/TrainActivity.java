@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
@@ -45,6 +47,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class TrainActivity extends AppCompatActivity implements Serializable, CameraBridgeViewBase.CvCameraViewListener2 {
+    Intent intent;
     private static final String TAG = "Train::Activity";
     CascadeClassifier cascadeClassifier;
     Mat mRgba, mGray;
@@ -53,19 +56,28 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
     Button buttonCapture, buttonAdd;
     ImageView imageView;
     EditText editTextName;
-    Bitmap bitmapImagePreview, bitmapTrain;
+    Bitmap bitmapImagePreview;
     float[] floatValues = new float[160 * 160 * 3];
     String root = Environment.getExternalStorageDirectory().toString();
     File myDir = new File(root + "/recognize");
     private String MODEL_PATH = "file:///android_asset/optimized_facenet.pb";
     private String INPUT_NAME = "input";
     private String OUTPUT_NAME = "embeddings";
+
+
     private TensorFlowInferenceInterface tf;
     float[] PREDICTIONS = new float[128];
     Map<String, Integer> labelMap;
     static {
         System.loadLibrary("tensorflow_inference");
     }
+    Handler mHandler;
+    int countImages=0;
+    static final long MAXIMG = 10;
+    public static final int TRAINING= 0;
+    public static final int IDLE= 2;
+    private int faceState=TRAINING;
+
 
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
@@ -152,10 +164,13 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_train);
 
+        intent = getIntent();
 
         cameraBridgeViewBase = findViewById(R.id.myCameraView);
         cameraBridgeViewBase.setCvCameraViewListener(this);
         cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
+
+        cameraBridgeViewBase.setCameraIndex(intent.getIntExtra("idCamera", 0));
 
         buttonCapture = findViewById(R.id.buttonTrain);
         buttonAdd = findViewById(R.id.buttonAdd);
@@ -171,23 +186,48 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
 
         loadLabelData();
 
+        mHandler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                if (msg.obj=="IMG")
+                {
+//                    Canvas canvas = new Canvas();
+//                    canvas.setBitmap(mBitmap);
+                    imageView.setImageBitmap(bitmapImagePreview);
+                    if (countImages>=MAXIMG-1)
+                    {
+                        Toast.makeText(TrainActivity.this, "Add success", Toast.LENGTH_SHORT).show();
+                        countImages=0;
+                        faceState=IDLE;
+                     //   imageView.setImageResource(R.drawable.user_image);
+                    }
+                }
+            }
+        };
+
 
         buttonCapture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                imageView.setImageBitmap(bitmapImagePreview);
-                bitmapTrain = bitmapImagePreview;
+//                imageView.setImageBitmap(bitmapImagePreview);
+//                bitmapTrain = bitmapImagePreview;
+                finish();
             }
         });
         
         buttonAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                loadLabelData();
+            //    loadLabelData();
+                imageView.setImageBitmap(bitmapImagePreview);
                 String name = editTextName.getText().toString().trim();
                 if(!editTextName.getText().toString().isEmpty()){
                     //Resize the image into 160 x 160
-                    Bitmap resized_image = ImageUtils.processBitmap(bitmapTrain,160);
+
+//                    floatValues = new float[160 * 160 * 3];
+//                    PREDICTIONS = new float[128];
+
+                    Bitmap resized_image = ImageUtils.processBitmap(bitmapImagePreview,160);
 
                     //Normalize the pixels
                     floatValues = ImageUtils.normalizeBitmap(resized_image,160,80.5f,1.0f);
@@ -270,16 +310,29 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
 
         MatOfRect list_face = new MatOfRect();
 
-        cascadeClassifier.detectMultiScale(mRgba, list_face);
+        cascadeClassifier.detectMultiScale(mGray, list_face);
 
         Rect[] list = list_face.toArray();
 
 
-        if(list.length == 1) {
+        if(list.length == 1 && !editTextName.getText().toString().isEmpty()) {
             Rect r = list[0];
-            Mat m = mRgba.submat(r);
-            bitmapImagePreview = Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(m, bitmapImagePreview);
+            Mat m = mGray.submat(r);
+//            int x1 = (int) r.x;
+//            int y1 = (int) r.y;
+//            int x2 = x1 + r.width;
+//            int y2 = y1 + r.height;
+//            Mat m = mGray.submat(y1, y2, x1, x2);
+
+            Bitmap bitmap= Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(m, bitmap);
+            bitmapImagePreview = bitmap;
+
+            Message msg = new Message();
+            String textTochange = "IMG";
+            msg.obj = textTochange;
+            mHandler.sendMessage(msg);
+
         }
 
 

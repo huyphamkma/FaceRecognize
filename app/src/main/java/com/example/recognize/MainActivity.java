@@ -11,7 +11,10 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
@@ -25,6 +28,9 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
     Button buttonTrain, buttonRecognize;
+    RadioGroup radioGroupCam;
+    RadioButton radioFrontCam, radioBackCam;
+    int idCamera = 0;
 
 
 
@@ -37,11 +43,37 @@ public class MainActivity extends AppCompatActivity {
 
         buttonTrain = findViewById(R.id.buttonTrain);
         buttonRecognize = findViewById(R.id.buttonRecognize);
+        radioGroupCam = findViewById(R.id.radioGroupCam);
+        radioBackCam = findViewById(R.id.radioBackCam);
+        radioFrontCam = findViewById(R.id.radioFrontCam);
+        radioBackCam.setChecked(true);
+
+        radioGroupCam.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+
+            }
+        });
+
+        radioBackCam.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                idCamera = 1;
+            }
+        });
+
+        radioFrontCam.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                idCamera = 0;
+            }
+        });
 
         buttonRecognize.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, RecognizeActivity.class);
+                intent.putExtra("idCamera", idCamera);
                 startActivity(intent);
             }
         });
@@ -50,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, TrainActivity.class);
+                intent.putExtra("idCamera", idCamera);
                 startActivity(intent);
             }
         });

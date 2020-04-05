@@ -3,6 +3,7 @@ package com.example.recognize;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Environment;
@@ -10,7 +11,10 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,6 +28,7 @@ import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
@@ -39,7 +44,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RecognizeActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
+    Intent intent = getIntent();
     TextView textView;
+    ImageView imageView;
+    Button button;
     private static final String TAG = "Recognize::Activity";
     CascadeClassifier cascadeClassifier;
     Bitmap bitmap;
@@ -48,14 +56,21 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     File myDir = new File(root + "/recognize");
     Map<Integer, String> labelMap;
     Handler mHandler;
+    int size = 0;
+    int idCamera = 0;
 
     //PATH TO OUR MODEL FILE AND NAMES OF THE INPUT AND OUTPUT NODES
     private String MODEL_PATH = "file:///android_asset/optimized_facenet.pb";
     private String INPUT_NAME = "input";
     private String OUTPUT_NAME = "embeddings";
+
     private TensorFlowInferenceInterface tf;
     float[] PREDICTIONS = new float[128];
-    float[][] value = new float[100][129];
+    float[][] value = new float[1000][129];
+
+
+
+
 
 
     Mat mRgba, mGray;
@@ -107,6 +122,7 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
             Log.e("OpenCVActivity", "Error loading cascade", e);
         }
         cameraBridgeViewBase.enableView();
+
     }
 
 
@@ -150,7 +166,9 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
                 String[] split = s.split(" ");
                 for(int j = 0; j < 129; j++){
                     value[i][j] = Float.parseFloat(split[j]);
+
                 }
+                size++;
                 i++;
             }
             buf.close();
@@ -171,11 +189,18 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_recognize);
 
+        intent = getIntent();
+
         textView = findViewById(R.id.textView);
+        imageView = findViewById(R.id.imageView3);
 
         cameraBridgeViewBase = findViewById(R.id.myCameraView);
         cameraBridgeViewBase.setCvCameraViewListener(this);
         cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
+       // int idCamera = intent.getIntExtra("idCamera", 0);
+      //  Toast.makeText(this, "id = "+idCamera, Toast.LENGTH_SHORT).show();
+        cameraBridgeViewBase.setCameraIndex(intent.getIntExtra("idCamera", 0));
+
 
         tf = new TensorFlowInferenceInterface(getAssets(),MODEL_PATH);
 
@@ -188,9 +213,12 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
             public void handleMessage(Message msg) {
                 String tempName = msg.obj.toString();
                 textView.setText(tempName);
+                imageView.setImageBitmap(bitmap);
             }
 
         };
+     //   Toast.makeText(this, size+"", Toast.LENGTH_SHORT).show();
+
     }
 
 
@@ -226,25 +254,44 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
+//        if (mAbsoluteFaceSize == 0) {
+//            int height = mGray.rows();
+//            if (Math.round(height * mRelativeFaceSize) > 0) {
+//                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
+//            }
+//        }
+
         MatOfRect list_face = new MatOfRect();
 
         cascadeClassifier.detectMultiScale(mRgba, list_face);
 
+//        cascadeClassifier.detectMultiScale(mGray, list_face, 1.1,2,2,
+//                new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+
         Rect[] list = list_face.toArray();
 
-        if(list.length == 1) {
+        if(list.length > 0) {
             Rect r = list[0];
-            Mat m = mRgba.submat(r);
-            bitmap  = Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(m, bitmap);
+            Mat m = mGray.submat(r);
+//            int x1 = (int) r.x;
+//            int y1 = (int) r.y;
+//            int x2 = x1 + r.width;
+//            int y2 = y1 + r.height;
+//            Mat m = mGray.submat(y1, y2, x1, x2);
+            Bitmap bitmapRecognize = Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(m, bitmapRecognize);
 
-            floatValues = new float[160 * 160 * 3];
+            bitmap = bitmapRecognize;
+
+
 
             //Resize the image into 160 x 160
-            Bitmap resized_image = ImageUtils.processBitmap(bitmap,160);
+            Bitmap resized_image = ImageUtils.processBitmap(bitmapRecognize,160);
 
             //Normalize the pixels
             floatValues = ImageUtils.normalizeBitmap(resized_image,160,80.5f,1.0f);
+
+            // 160 80.5f 1.0f
 
             //Pass input into the tensorflow
             tf.feed(INPUT_NAME,floatValues,1,160,160,3);
@@ -257,7 +304,7 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
 
             float min = 99999;
             int vtMin = 0;
-            for(int i = 0; i < labelMap.size(); i++){
+            for(int i = 0; i < size; i++){
                 float dis = TinhKhoangCach(PREDICTIONS, value[i]);
                 if(dis < min){
                     min = dis;
@@ -267,8 +314,8 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
 
             String name = labelMap.get(vtMin);
             Message msg = new Message();
-            if(min < 0.4){
-                msg.obj = name;
+            if(min < 0.3){
+                msg.obj = name+"\n"+ min;
             }else{
                 msg.obj = "unknow";
             }
