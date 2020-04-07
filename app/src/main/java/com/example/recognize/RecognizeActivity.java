@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Environment;
@@ -23,6 +24,7 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
@@ -41,7 +43,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+
+import static org.opencv.objdetect.Objdetect.CASCADE_SCALE_IMAGE;
 
 public class RecognizeActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
     Intent intent = getIntent();
@@ -58,6 +64,8 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     Handler mHandler;
     int size = 0;
     int idCamera = 0;
+    Set<String> uniqueNames = new HashSet<String>();
+    String[] uniqueNamesArray = new String[10];
 
     //PATH TO OUR MODEL FILE AND NAMES OF THE INPUT AND OUTPUT NODES
     private String MODEL_PATH = "file:///android_asset/optimized_facenet.pb";
@@ -67,6 +75,9 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     private TensorFlowInferenceInterface tf;
     float[] PREDICTIONS = new float[128];
     float[][] value = new float[1000][129];
+
+    private float                  mRelativeFaceSize   = 0.2f;
+    private int                    mAbsoluteFaceSize   = 0;
 
 
 
@@ -102,9 +113,9 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     private void loadModelDetect() {
         try {
             // Copy data tu file XML sang 1 file de openCv co the doc duoc du lieu
-            InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+            InputStream is = getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
             File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-            File mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+            File mCascadeFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
             FileOutputStream os = new FileOutputStream(mCascadeFile);
 
             byte[] buffer = new byte[4096];
@@ -192,7 +203,7 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
         intent = getIntent();
 
         textView = findViewById(R.id.textView);
-        imageView = findViewById(R.id.imageView3);
+        imageView = findViewById(R.id.imageView);
 
         cameraBridgeViewBase = findViewById(R.id.myCameraView);
         cameraBridgeViewBase.setCvCameraViewListener(this);
@@ -212,8 +223,23 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
             @Override
             public void handleMessage(Message msg) {
                 String tempName = msg.obj.toString();
-                textView.setText(tempName);
-                imageView.setImageBitmap(bitmap);
+//                if(!tempName.equals("unknow")){
+//                    uniqueNames.add(tempName);
+//                    uniqueNamesArray = uniqueNames.toArray(new String[uniqueNames.size()]);
+//                    StringBuilder strBuilder = new StringBuilder();
+//                    for (int i = 0; i < uniqueNamesArray.length; i++) {
+//                        strBuilder.append(uniqueNamesArray[i] + "\n");
+//                    }
+//                    String textToDisplay = strBuilder.toString();
+//                    textView.setText(tempName);
+//                }
+                if(!tempName.equals("")){
+                    imageView.setImageResource(R.drawable.ic_green);
+                    textView.setText(tempName);
+                }else {
+                    imageView.setImageResource(R.drawable.ic_red);
+                    textView.setText("unknow");
+                }
             }
 
         };
@@ -254,70 +280,74 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
-//        if (mAbsoluteFaceSize == 0) {
-//            int height = mGray.rows();
-//            if (Math.round(height * mRelativeFaceSize) > 0) {
-//                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
-//            }
-//        }
+
+      //  Imgproc.resize(mGray, mGray, new Size(mGray.width(),(float)mGray.height()/ ((float)mGray.width()/ (float)mGray.height())));
+
+
 
         MatOfRect list_face = new MatOfRect();
 
-        cascadeClassifier.detectMultiScale(mRgba, list_face);
+   //    cascadeClassifier.detectMultiScale(mGray, list_face);
+        cascadeClassifier.detectMultiScale(mGray,list_face,1.2,4,0|CASCADE_SCALE_IMAGE , new Size(50,50), new Size());
 
+//
 //        cascadeClassifier.detectMultiScale(mGray, list_face, 1.1,2,2,
 //                new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
 
         Rect[] list = list_face.toArray();
 
         if(list.length > 0) {
-            Rect r = list[0];
-            Mat m = mGray.submat(r);
+            Message msg = new Message();
+            msg.obj="";
+            for(int i = 0; i < list.length; i++) {
+                Rect r = list[i];
+                Mat m = mGray.submat(r);
 //            int x1 = (int) r.x;
 //            int y1 = (int) r.y;
 //            int x2 = x1 + r.width;
 //            int y2 = y1 + r.height;
 //            Mat m = mGray.submat(y1, y2, x1, x2);
-            Bitmap bitmapRecognize = Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(m, bitmapRecognize);
+                Bitmap bitmapRecognize = Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
+                Utils.matToBitmap(m, bitmapRecognize);
 
-            bitmap = bitmapRecognize;
+                bitmap = bitmapRecognize;
 
 
+                //Resize the image into 160 x 160
+                Bitmap resized_image = ImageUtils.processBitmap(bitmapRecognize, 160);
 
-            //Resize the image into 160 x 160
-            Bitmap resized_image = ImageUtils.processBitmap(bitmapRecognize,160);
+                //Normalize the pixels
+                floatValues = ImageUtils.normalizeBitmap(resized_image, 160, 80.5f, 1.0f);
 
-            //Normalize the pixels
-            floatValues = ImageUtils.normalizeBitmap(resized_image,160,80.5f,1.0f);
+                // 160 80.5f 1.0f
 
-            // 160 80.5f 1.0f
+                //Pass input into the tensorflow
+                tf.feed(INPUT_NAME, floatValues, 1, 160, 160, 3);
 
-            //Pass input into the tensorflow
-            tf.feed(INPUT_NAME,floatValues,1,160,160,3);
+                //compute predictions
+                tf.run(new String[]{OUTPUT_NAME});
 
-            //compute predictions
-            tf.run(new String[]{OUTPUT_NAME});
+                //copy the output into the PREDICTIONS array
+                tf.fetch(OUTPUT_NAME, PREDICTIONS);
 
-            //copy the output into the PREDICTIONS array
-            tf.fetch(OUTPUT_NAME,PREDICTIONS);
-
-            float min = 99999;
-            int vtMin = 0;
-            for(int i = 0; i < size; i++){
-                float dis = TinhKhoangCach(PREDICTIONS, value[i]);
-                if(dis < min){
-                    min = dis;
-                    vtMin = (int) value[i][128];
+                float min = 99999;
+                int vtMin = 0;
+                for (int j = 0; j < size; j++) {
+                    float dis = TinhKhoangCach(PREDICTIONS, value[j]);
+                    if (dis < min) {
+                        min = dis;
+                        vtMin = (int) value[j][128];
+                    }
                 }
-            }
 
-            String name = labelMap.get(vtMin);
-            Message msg = new Message();
-            if(min < 0.3){
-                msg.obj = name+"\n"+ min;
-            }else{
-                msg.obj = "unknow";
+                String name = labelMap.get(vtMin);
+
+                if (min < 0.3) {
+                    msg.obj += name+"\n";
+                } else {
+                    msg.obj += "";
+                }
+
             }
             mHandler.sendMessage(msg);
 

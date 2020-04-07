@@ -20,7 +20,6 @@ import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
@@ -29,6 +28,7 @@ import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
@@ -42,9 +42,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.opencv.objdetect.Objdetect.CASCADE_SCALE_IMAGE;
 
 public class TrainActivity extends AppCompatActivity implements Serializable, CameraBridgeViewBase.CvCameraViewListener2 {
     Intent intent;
@@ -53,7 +54,7 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
     Mat mRgba, mGray;
     Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     CameraBridgeViewBase cameraBridgeViewBase;
-    Button buttonCapture, buttonAdd;
+    Button buttonExit, buttonAdd;
     ImageView imageView;
     EditText editTextName;
     Bitmap bitmapImagePreview;
@@ -101,9 +102,9 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
     private void loadModelDetect() {
         try {
             // Copy data tu file XML sang 1 file de openCv co the doc duoc du lieu
-            InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+            InputStream is = getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
             File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-            File mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+            File mCascadeFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
             FileOutputStream os = new FileOutputStream(mCascadeFile);
 
             byte[] buffer = new byte[4096];
@@ -172,7 +173,7 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
 
         cameraBridgeViewBase.setCameraIndex(intent.getIntExtra("idCamera", 0));
 
-        buttonCapture = findViewById(R.id.buttonTrain);
+        buttonExit = findViewById(R.id.buttonExit);
         buttonAdd = findViewById(R.id.buttonAdd);
         editTextName = findViewById(R.id.editTextName);
         imageView = findViewById(R.id.imageView2);
@@ -191,26 +192,23 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
             public void handleMessage(Message msg) {
                 if (msg.obj=="IMG")
                 {
-//                    Canvas canvas = new Canvas();
-//                    canvas.setBitmap(mBitmap);
+
                     imageView.setImageBitmap(bitmapImagePreview);
                     if (countImages>=MAXIMG-1)
                     {
                         Toast.makeText(TrainActivity.this, "Add success", Toast.LENGTH_SHORT).show();
                         countImages=0;
                         faceState=IDLE;
-                     //   imageView.setImageResource(R.drawable.user_image);
                     }
                 }
             }
         };
 
 
-        buttonCapture.setOnClickListener(new View.OnClickListener() {
+        buttonExit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                imageView.setImageBitmap(bitmapImagePreview);
-//                bitmapTrain = bitmapImagePreview;
+
                 finish();
             }
         });
@@ -308,9 +306,13 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
+
+      //  Imgproc.resize(mGray, mGray, new Size(mGray.width(),(float)mGray.height()/ ((float)mGray.width()/ (float)mGray.height())));
+
         MatOfRect list_face = new MatOfRect();
 
         cascadeClassifier.detectMultiScale(mGray, list_face);
+        cascadeClassifier.detectMultiScale(mGray,list_face,1.1,3,0|CASCADE_SCALE_IMAGE, new Size(50,50), new Size());
 
         Rect[] list = list_face.toArray();
 
