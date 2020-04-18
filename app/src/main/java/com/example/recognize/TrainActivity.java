@@ -73,11 +73,7 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         System.loadLibrary("tensorflow_inference");
     }
     Handler mHandler;
-    int countImages=0;
-    static final long MAXIMG = 10;
-    public static final int TRAINING= 0;
-    public static final int IDLE= 2;
-    private int faceState=TRAINING;
+
 
 
 
@@ -102,9 +98,9 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
     private void loadModelDetect() {
         try {
             // Copy data tu file XML sang 1 file de openCv co the doc duoc du lieu
-            InputStream is = getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
+            InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
             File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-            File mCascadeFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
+            File mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
             FileOutputStream os = new FileOutputStream(mCascadeFile);
 
             byte[] buffer = new byte[4096];
@@ -140,9 +136,7 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
             e.printStackTrace();
         }
 
-//        if (labelMap.isEmpty()){
-//            Toast.makeText(this, "EMPTY", Toast.LENGTH_SHORT).show();
-//        }
+
     }
 
     private int checkName(String name){
@@ -192,14 +186,8 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
             public void handleMessage(Message msg) {
                 if (msg.obj=="IMG")
                 {
-
                     imageView.setImageBitmap(bitmapImagePreview);
-                    if (countImages>=MAXIMG-1)
-                    {
-                        Toast.makeText(TrainActivity.this, "Add success", Toast.LENGTH_SHORT).show();
-                        countImages=0;
-                        faceState=IDLE;
-                    }
+                    Toast.makeText(TrainActivity.this, "Add success", Toast.LENGTH_SHORT).show();
                 }
             }
         };
@@ -221,9 +209,6 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
                 String name = editTextName.getText().toString().trim();
                 if(!editTextName.getText().toString().isEmpty()){
                     //Resize the image into 160 x 160
-
-//                    floatValues = new float[160 * 160 * 3];
-//                    PREDICTIONS = new float[128];
 
                     Bitmap resized_image = ImageUtils.processBitmap(bitmapImagePreview,160);
 
@@ -307,12 +292,9 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         mGray = inputFrame.gray();
 
 
-      //  Imgproc.resize(mGray, mGray, new Size(mGray.width(),(float)mGray.height()/ ((float)mGray.width()/ (float)mGray.height())));
-
         MatOfRect list_face = new MatOfRect();
 
-        cascadeClassifier.detectMultiScale(mGray, list_face);
-        cascadeClassifier.detectMultiScale(mGray,list_face,1.1,3,0|CASCADE_SCALE_IMAGE, new Size(50,50), new Size());
+        cascadeClassifier.detectMultiScale(mGray,list_face,1.1,6,0|CASCADE_SCALE_IMAGE, new Size(70,70), new Size());
 
         Rect[] list = list_face.toArray();
 
@@ -320,14 +302,16 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         if(list.length == 1 && !editTextName.getText().toString().isEmpty()) {
             Rect r = list[0];
             Mat m = mGray.submat(r);
-//            int x1 = (int) r.x;
-//            int y1 = (int) r.y;
-//            int x2 = x1 + r.width;
-//            int y2 = y1 + r.height;
-//            Mat m = mGray.submat(y1, y2, x1, x2);
 
-            Bitmap bitmap= Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(m, bitmap);
+            // tang do tuong phan, can bang sang
+            Mat dst = new Mat(m.rows(), m.cols(), m.type());
+            Imgproc.equalizeHist(m, dst);
+
+            // Giam nhieu cua anh
+            Imgproc.medianBlur(dst, dst, 3);
+
+            Bitmap bitmap= Bitmap.createBitmap(dst.width(), dst.height(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(dst, bitmap);
             bitmapImagePreview = bitmap;
 
             Message msg = new Message();

@@ -4,6 +4,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 
+import org.opencv.core.Mat;
+
 public class ImageUtils {
     public static Matrix getTransformationMatrix(
             final int srcWidth,
@@ -92,4 +94,6 @@ public class ImageUtils {
         return output;
 
     }
+
+
 }

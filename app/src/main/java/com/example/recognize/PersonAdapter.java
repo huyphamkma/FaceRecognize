@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -74,6 +75,8 @@ public class PersonAdapter extends ArrayAdapter<Person> {
                         try {
                             delete();
                             ManageActivity.adtPerson.notifyDataSetChanged();
+                            context.finish();
+                            context.startActivity(context.getIntent());
                             Toast.makeText(getContext(), "Deleted " + person.getName(), Toast.LENGTH_SHORT).show();
                         } catch (IOException e) {
                             e.printStackTrace();

@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class ManageActivity extends AppCompatActivity {
-    ListView listView;
+    public static ListView listView;
     ArrayList<Person> dsPerson;
     public static PersonAdapter adtPerson;
     String root = Environment.getExternalStorageDirectory().toString();

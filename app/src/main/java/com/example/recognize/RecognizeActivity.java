@@ -63,9 +63,6 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     Map<Integer, String> labelMap;
     Handler mHandler;
     int size = 0;
-    int idCamera = 0;
-    Set<String> uniqueNames = new HashSet<String>();
-    String[] uniqueNamesArray = new String[10];
 
     //PATH TO OUR MODEL FILE AND NAMES OF THE INPUT AND OUTPUT NODES
     private String MODEL_PATH = "file:///android_asset/optimized_facenet.pb";
@@ -75,14 +72,6 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     private TensorFlowInferenceInterface tf;
     float[] PREDICTIONS = new float[128];
     float[][] value = new float[1000][129];
-
-    private float                  mRelativeFaceSize   = 0.2f;
-    private int                    mAbsoluteFaceSize   = 0;
-
-
-
-
-
 
     Mat mRgba, mGray;
     Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
@@ -113,9 +102,9 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     private void loadModelDetect() {
         try {
             // Copy data tu file XML sang 1 file de openCv co the doc duoc du lieu
-            InputStream is = getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
+            InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
             File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-            File mCascadeFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
+            File mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
             FileOutputStream os = new FileOutputStream(mCascadeFile);
 
             byte[] buffer = new byte[4096];
@@ -280,19 +269,9 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
-
-      //  Imgproc.resize(mGray, mGray, new Size(mGray.width(),(float)mGray.height()/ ((float)mGray.width()/ (float)mGray.height())));
-
-
-
         MatOfRect list_face = new MatOfRect();
 
-   //    cascadeClassifier.detectMultiScale(mGray, list_face);
-        cascadeClassifier.detectMultiScale(mGray,list_face,1.2,4,0|CASCADE_SCALE_IMAGE , new Size(50,50), new Size());
-
-//
-//        cascadeClassifier.detectMultiScale(mGray, list_face, 1.1,2,2,
-//                new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+        cascadeClassifier.detectMultiScale(mGray,list_face,1.2,6,0|CASCADE_SCALE_IMAGE , new Size(70,70), new Size());
 
         Rect[] list = list_face.toArray();
 
@@ -302,13 +281,17 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
             for(int i = 0; i < list.length; i++) {
                 Rect r = list[i];
                 Mat m = mGray.submat(r);
-//            int x1 = (int) r.x;
-//            int y1 = (int) r.y;
-//            int x2 = x1 + r.width;
-//            int y2 = y1 + r.height;
-//            Mat m = mGray.submat(y1, y2, x1, x2);
-                Bitmap bitmapRecognize = Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(m, bitmapRecognize);
+
+                // tang do tuong phan, can bang sang
+                Mat dst = new Mat(m.rows(), m.cols(), m.type());
+                Imgproc.equalizeHist(m, dst);
+
+
+                // Giam nhieu cua anh
+                Imgproc.medianBlur(dst, dst, 3);
+
+                Bitmap bitmapRecognize = Bitmap.createBitmap(dst.width(), dst.height(), Bitmap.Config.ARGB_8888);
+                Utils.matToBitmap(dst, bitmapRecognize);
 
                 bitmap = bitmapRecognize;
 
