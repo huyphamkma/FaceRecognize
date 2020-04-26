@@ -23,7 +23,7 @@ public class DetectFaceUtils {
         try {
             // Copy data tu file XML sang 1 file de openCv co the doc duoc du lieu
      //       InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
-            InputStream is = context.getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
+            InputStream is = context.getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
             File cascadeDir = context.getDir("cascade", Context.MODE_PRIVATE);
             File mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
             FileOutputStream os = new FileOutputStream(mCascadeFile);
