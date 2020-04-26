@@ -13,11 +13,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,8 +28,9 @@ public class PersonAdapter extends ArrayAdapter<Person> {
     File myDir = new File(root + "/recognize");
     ArrayList<Person> dsPerson;
 
-    float[][] value = new float[1000][129];
-    int size = 0;
+    float[][] value = new float[100][129];
+    String[][] arrLabel;
+    int lengthTrainData, lengthLabelData;
 
     int idPersonDelete = 0;
 
@@ -64,7 +61,6 @@ public class PersonAdapter extends ArrayAdapter<Person> {
         imageViewDelete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-            //    Toast.makeText(getContext(), "id = "+person.getId()+" "+person.getName(), Toast.LENGTH_SHORT).show();
                 AlertDialog.Builder adb=new AlertDialog.Builder(getContext());
                 adb.setTitle("Delete?");
                 adb.setMessage("Are you sure you want to delete " + person.getName());
@@ -91,11 +87,15 @@ public class PersonAdapter extends ArrayAdapter<Person> {
     }
 
     private void delete() throws IOException {
-        loadTrainData();
-        loadLabelData();
+
+        value = FileUtils.loadTrainData();
+        lengthTrainData = FileUtils.getLengthTrainData();
+        arrLabel = FileUtils.loadLabelData();
+        lengthLabelData = FileUtils.getLengthLabelData();
+        loadData();
 
 
-        // ghi file
+        // ghi file train
         File input = new File(myDir, "train_data");
         FileWriter fw = new FileWriter(input, false);
         for(int i = 0; i < dsPerson.size(); i++){
@@ -109,7 +109,7 @@ public class PersonAdapter extends ArrayAdapter<Person> {
         fw.close();
 
 
-        //ghi file
+        //ghi file label
         input = new File(myDir, "label_data");
         fw = new FileWriter(input, false);
         for(int i = 0; i < dsPerson.size(); i++){
@@ -121,49 +121,12 @@ public class PersonAdapter extends ArrayAdapter<Person> {
 
     }
 
-
-    private void loadLabelData(){
-        File output = new File(myDir, "label_data");
-        try {
-            BufferedReader buf = new BufferedReader(new FileReader(output));
-            String s = "";
-            while ((s = buf.readLine()) != null) {
-                String[] split = s.split(";");
-                Person person = new Person(Integer.parseInt(split[1]), split[0]);
-                dsPerson.add(person);
-            }
-            buf.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+    private void loadData(){
+        for(int i = 0; i < lengthLabelData; i++){
+            Person person = new Person(Integer.parseInt(arrLabel[i][1]), arrLabel[i][0]);
+            dsPerson.add(person);
         }
-
     }
 
 
-    private void loadTrainData() {
-        File output = new File(myDir, "train_data");
-        try {
-            BufferedReader buf = new BufferedReader(new FileReader(output));
-            String s = "";
-            int i = 0;
-            while ((s = buf.readLine()) != null) {
-                String[] split = s.split(" ");
-                for(int j = 0; j < 129; j++){
-                    value[i][j] = Float.parseFloat(split[j]);
-
-                }
-                size++;
-                i++;
-            }
-            buf.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-    }
 }

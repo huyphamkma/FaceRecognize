@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 public class ImageUtils {
     public static Matrix getTransformationMatrix(
@@ -93,6 +94,17 @@ public class ImageUtils {
 
         return output;
 
+    }
+
+    public static Mat equalizeImage(Mat source){
+        Mat dst = new Mat(source.rows(), source.cols(), source.type());
+        Imgproc.equalizeHist(source, dst);
+        return dst;
+    }
+
+    public static Mat medianBlur(Mat source){
+        Imgproc.medianBlur(source, source, 3);
+        return source;
     }
 
 

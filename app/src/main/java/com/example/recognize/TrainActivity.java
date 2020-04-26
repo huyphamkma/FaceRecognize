@@ -42,6 +42,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,7 +51,9 @@ import static org.opencv.objdetect.Objdetect.CASCADE_SCALE_IMAGE;
 public class TrainActivity extends AppCompatActivity implements Serializable, CameraBridgeViewBase.CvCameraViewListener2 {
     Intent intent;
     private static final String TAG = "Train::Activity";
+    private static final int MAXCAPACITY = 100;
     CascadeClassifier cascadeClassifier;
+    DetectFaceUtils detectFaceUtils;
     Mat mRgba, mGray;
     Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     CameraBridgeViewBase cameraBridgeViewBase;
@@ -61,14 +64,12 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
     float[] floatValues = new float[160 * 160 * 3];
     String root = Environment.getExternalStorageDirectory().toString();
     File myDir = new File(root + "/recognize");
-    private String MODEL_PATH = "file:///android_asset/optimized_facenet.pb";
-    private String INPUT_NAME = "input";
-    private String OUTPUT_NAME = "embeddings";
-
 
     private TensorFlowInferenceInterface tf;
     float[] PREDICTIONS = new float[128];
-    Map<String, Integer> labelMap;
+
+    String[][] arrLabel;
+    int lengthLabel;
     static {
         System.loadLibrary("tensorflow_inference");
     }
@@ -84,7 +85,10 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
-                    loadModelDetect();
+                //    loadModelDetect();
+                    detectFaceUtils = new DetectFaceUtils(getApplication());
+                    cascadeClassifier = detectFaceUtils.loadModelDetect();
+                    cameraBridgeViewBase.enableView();
 
                 } break;
                 default:
@@ -95,60 +99,29 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         }
     };
 
-    private void loadModelDetect() {
-        try {
-            // Copy data tu file XML sang 1 file de openCv co the doc duoc du lieu
-            InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
-            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-            File mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
-            FileOutputStream os = new FileOutputStream(mCascadeFile);
-
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) {
-                os.write(buffer, 0, bytesRead);
-            }
-            is.close();
-            os.close();
-
-            // Load the cascade classifier
-            cascadeClassifier = new CascadeClassifier(mCascadeFile.getAbsolutePath());
-
-        } catch (Exception e) {
-            Log.e("OpenCVActivity", "Error loading cascade", e);
-        }
-        cameraBridgeViewBase.enableView();
-    }
-
-    private void loadLabelData(){
-        File output = new File(myDir, "label_data");
-        try {
-            BufferedReader buf = new BufferedReader(new FileReader(output));
-            String s = "";
-            while ((s = buf.readLine()) != null) {
-                String[] split = s.split(";");
-                labelMap.put(split[0], Integer.parseInt(split[1]));
-            }
-            buf.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-    }
 
     private int checkName(String name){
-        int id = 0;
-        if(labelMap.isEmpty())
+
+        if(lengthLabel == 0)
             return 1;
-        if(labelMap.containsKey(name)){
-            id = labelMap.get(name);
-        }else{
-            id = labelMap.size()+1;
+        for(int i = 0; i < lengthLabel; i++){
+            if(arrLabel[i][0] == name){
+                return Integer.parseInt(arrLabel[i][1]);
+            }
         }
-        return id;
+        for(int i = 1; i <= MAXCAPACITY; i++){
+            boolean check = true;
+            for(int j = 0; j < lengthLabel; j++){
+                if(Integer.parseInt(arrLabel[j][1]) == i) {
+                    check = false;
+                    break;
+                }
+            }
+            if(check == true){
+                return i;
+            }
+        }
+        return -1;
     }
 
 
@@ -172,14 +145,15 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         editTextName = findViewById(R.id.editTextName);
         imageView = findViewById(R.id.imageView2);
 
-        tf = new TensorFlowInferenceInterface(getAssets(),MODEL_PATH);
-        labelMap = new HashMap<>();
+        tf = new TensorFlowInferenceInterface(getAssets(),RecognizeFaceUtils.MODEL_PATH);
+        arrLabel = new String[MAXCAPACITY][2];
 
         if (!myDir.exists()) {
             myDir.mkdirs();
         }
+        arrLabel = FileUtils.loadLabelData();
+        lengthLabel = FileUtils.getLengthLabelData();
 
-        loadLabelData();
 
         mHandler = new Handler() {
             @Override
@@ -187,7 +161,6 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
                 if (msg.obj=="IMG")
                 {
                     imageView.setImageBitmap(bitmapImagePreview);
-                    Toast.makeText(TrainActivity.this, "Add success", Toast.LENGTH_SHORT).show();
                 }
             }
         };
@@ -204,7 +177,6 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         buttonAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-            //    loadLabelData();
                 imageView.setImageBitmap(bitmapImagePreview);
                 String name = editTextName.getText().toString().trim();
                 if(!editTextName.getText().toString().isEmpty()){
@@ -215,40 +187,13 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
                     //Normalize the pixels
                     floatValues = ImageUtils.normalizeBitmap(resized_image,160,80.5f,1.0f);
 
-                    //Pass input into the tensorflow
-                    tf.feed(INPUT_NAME,floatValues,1,160,160,3);
-
-                    //compute predictions
-                    tf.run(new String[]{OUTPUT_NAME});
-
-                    //copy the output into the PREDICTIONS array
-                    tf.fetch(OUTPUT_NAME,PREDICTIONS);
+                    PREDICTIONS = RecognizeFaceUtils.predict(tf, floatValues);
 
                     int id = checkName(name);
 
+                    FileUtils.writeTrainData(id, PREDICTIONS);
 
-                    // ghi gia tri cua vector vao file train_data
-                    File input = new File(myDir, "train_data");
-                    try {
-                        FileWriter fw = new FileWriter(input, true);
-                        for(int i = 0; i < 128; i++){
-                            fw.append(PREDICTIONS[i]+" ");
-                        }
-                        fw.append(id+"\n");
-                        fw.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                    // ghi label vao file label_data
-                    File output = new File(myDir, "label_data");
-                    try {
-                        FileWriter fw = new FileWriter(output, true);
-                        fw.append(name+";"+id+"\n");
-                        fw.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    FileUtils.writeLabelData(name, id);
 
                     Toast.makeText(TrainActivity.this, "Add succes: "+name, Toast.LENGTH_SHORT).show();
 
@@ -304,14 +249,13 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
             Mat m = mGray.submat(r);
 
             // tang do tuong phan, can bang sang
-            Mat dst = new Mat(m.rows(), m.cols(), m.type());
-            Imgproc.equalizeHist(m, dst);
+            m = ImageUtils.equalizeImage(m);
 
             // Giam nhieu cua anh
-            Imgproc.medianBlur(dst, dst, 3);
+            m = ImageUtils.medianBlur(m);
 
-            Bitmap bitmap= Bitmap.createBitmap(dst.width(), dst.height(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(dst, bitmap);
+            Bitmap bitmap= Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(m, bitmap);
             bitmapImagePreview = bitmap;
 
             Message msg = new Message();
