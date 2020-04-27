@@ -5,9 +5,12 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 
 import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
 public class ImageUtils {
+    public static Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
+
     public static Matrix getTransformationMatrix(
             final int srcWidth,
             final int srcHeight,

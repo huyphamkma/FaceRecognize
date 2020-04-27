@@ -34,25 +34,22 @@ import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
 import static org.opencv.objdetect.Objdetect.CASCADE_SCALE_IMAGE;
 
 public class RecognizeActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
-    Intent intent = getIntent();
-    TextView textView;
-    ImageView imageView;
+    private Intent intent = getIntent();
+    private TextView textView;
+    private ImageView imageView;
     private static final String TAG = "Recognize::Activity";
-    private static final int MAXCAPACITY = 100;
-    CascadeClassifier cascadeClassifier;
-    DetectFaceUtils detectFaceUtils;
-    float[] floatValues = new float[160 * 160 * 3];
-    String[][] arrLabel;
-    int lengthLabelData;
-    Handler mHandler;
-    int lengthTrainData = 0;
+    private CascadeClassifier cascadeClassifier;
+    private DetectFaceUtils detectFaceUtils;
+    private float[] floatValues = new float[160 * 160 * 3];
+    private String[][] arrLabel;
+    private int lengthLabelData;
+    private Handler mHandler;
+    private int lengthTrainData = 0;
+    private TensorFlowInferenceInterface tfModel;
+    private float[] PREDICTIONS = new float[128];
+    private float[][] value = new float[FileUtils.MAXCAPACITY][129];
 
-    private TensorFlowInferenceInterface tf;
-    float[] PREDICTIONS = new float[128];
-    float[][] value = new float[MAXCAPACITY][129];
-
-    Mat mRgba, mGray;
-    Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
+    private Mat mRgba, mGray;
     CameraBridgeViewBase cameraBridgeViewBase;
 
     static {
@@ -80,7 +77,7 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     };
 
 
-    private float TinhKhoangCach(float[] x, float[] y){
+    private float computeDistance(float[] x, float[] y){
         float sum = 0;
         for(int i = 0; i < 128; i++){
             sum += (x[i]-y[i])*(x[i]-y[i]);
@@ -89,7 +86,7 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     }
 
 
-    String getName(int id){
+    private String getName(int id){
         for(int i = 0; i < lengthLabelData; i++){
             if(Integer.parseInt(arrLabel[i][1]) == id)
                 return arrLabel[i][0];
@@ -115,7 +112,7 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
         cameraBridgeViewBase.setCameraIndex(intent.getIntExtra("idCamera", 0));
 
 
-        tf = new TensorFlowInferenceInterface(getAssets(),RecognizeFaceUtils.MODEL_PATH);
+        tfModel = new TensorFlowInferenceInterface(getAssets(),RecognizeFaceUtils.MODEL_PATH);
 
         arrLabel =  FileUtils.loadLabelData();
         lengthLabelData = FileUtils.getLengthLabelData();
@@ -202,12 +199,12 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
                 //Normalize the pixels
                 floatValues = ImageUtils.normalizeBitmap(resized_image, 160, 80.5f, 1.0f);
 
-                PREDICTIONS = RecognizeFaceUtils.predict(tf, floatValues);
+                PREDICTIONS = RecognizeFaceUtils.predict(tfModel, floatValues);
 
                 float min = 99999;
                 int idMin = 0;
                 for (int j = 0; j < lengthTrainData; j++) {
-                    float dis = TinhKhoangCach(PREDICTIONS, value[j]);
+                    float dis = computeDistance(PREDICTIONS, value[j]);
                     if (dis < min) {
                         min = dis;
                         idMin = (int) value[j][128];
@@ -231,7 +228,7 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
         for(int i = 0; i < list.length; i++){
             Imgproc.rectangle(mRgba, new Point(list[i].x, list[i].y),
                     new Point(list[i].x+list[i].width,list[i].y+list[i].height),
-                    FACE_RECT_COLOR,2);
+                    ImageUtils.FACE_RECT_COLOR,2);
         }
 
 

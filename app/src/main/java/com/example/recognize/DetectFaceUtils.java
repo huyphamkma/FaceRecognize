@@ -22,10 +22,10 @@ public class DetectFaceUtils {
         CascadeClassifier cascadeClassifier = new CascadeClassifier();
         try {
             // Copy data tu file XML sang 1 file de openCv co the doc duoc du lieu
-     //       InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
+
             InputStream is = context.getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
             File cascadeDir = context.getDir("cascade", Context.MODE_PRIVATE);
-            File mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
+            File mCascadeFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
             FileOutputStream os = new FileOutputStream(mCascadeFile);
 
             byte[] buffer = new byte[4096];

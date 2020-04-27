@@ -11,10 +11,10 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
 public class MainActivity extends AppCompatActivity {
-    Button buttonTrain, buttonRecognize, buttonManage;
-    RadioGroup radioGroupCam;
-    RadioButton radioFrontCam, radioBackCam;
-    int idCamera = 0;
+    private Button buttonTrain, buttonRecognize, buttonManage;
+    private RadioGroup radioGroupCam;
+    private RadioButton radioFrontCam, radioBackCam;
+    private int idCamera = 0;
 
 
 

@@ -20,19 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PersonAdapter extends ArrayAdapter<Person> {
-    Activity context;
-    int resource;
-    List<Person> objects;
-
-    String root = Environment.getExternalStorageDirectory().toString();
-    File myDir = new File(root + "/recognize");
-    ArrayList<Person> dsPerson;
-
-    float[][] value = new float[100][129];
-    String[][] arrLabel;
-    int lengthTrainData, lengthLabelData;
-
-    int idPersonDelete = 0;
+    private Activity context;
+    private int resource;
+    private List<Person> objects;
+    private ArrayList<Person> dsPerson;
+    private float[][] trainValues = new float[100][129];
+    private String[][] arrLabel;
+    private int lengthLabelData;
+    private int idPersonDelete = 0;
 
 
     public PersonAdapter(Activity context, int resource, List<Person> objects) {
@@ -88,29 +83,28 @@ public class PersonAdapter extends ArrayAdapter<Person> {
 
     private void delete() throws IOException {
 
-        value = FileUtils.loadTrainData();
-        lengthTrainData = FileUtils.getLengthTrainData();
+        trainValues = FileUtils.loadTrainData();
         arrLabel = FileUtils.loadLabelData();
         lengthLabelData = FileUtils.getLengthLabelData();
         loadData();
 
 
         // ghi file train
-        File input = new File(myDir, "train_data");
+        File input = new File(FileUtils.myDir, "train_data");
         FileWriter fw = new FileWriter(input, false);
         for(int i = 0; i < dsPerson.size(); i++){
-            if(value[i][128] != idPersonDelete){
+            if(trainValues[i][128] != idPersonDelete){
                 for(int j = 0; j < 128; j++){
-                    fw.append(value[i][j]+" ");
+                    fw.append(trainValues[i][j]+" ");
                 }
-                fw.append((int)value[i][128]+"\n");
+                fw.append((int)trainValues[i][128]+"\n");
             }
         }
         fw.close();
 
 
         //ghi file label
-        input = new File(myDir, "label_data");
+        input = new File(FileUtils.myDir, "label_data");
         fw = new FileWriter(input, false);
         for(int i = 0; i < dsPerson.size(); i++){
             if(dsPerson.get(i).getId() != idPersonDelete){

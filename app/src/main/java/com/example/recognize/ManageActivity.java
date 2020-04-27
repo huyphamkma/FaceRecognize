@@ -15,11 +15,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class ManageActivity extends AppCompatActivity {
-    public static ListView listView;
-    ArrayList<Person> dsPerson;
+    private static ListView listView;
+    private ArrayList<Person> dsPerson;
     public static PersonAdapter adtPerson;
-    String root = Environment.getExternalStorageDirectory().toString();
-    File myDir = new File(root + "/recognize");
+
 
 
     @Override
@@ -37,7 +36,7 @@ public class ManageActivity extends AppCompatActivity {
 
 
     private void loadLabelData(){
-        File output = new File(myDir, "label_data");
+        File output = new File(FileUtils.myDir, "label_data");
         try {
             BufferedReader buf = new BufferedReader(new FileReader(output));
             String s = "";

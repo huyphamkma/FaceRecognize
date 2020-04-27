@@ -12,11 +12,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class FileUtils {
-    static String root = Environment.getExternalStorageDirectory().toString();
-    static File myDir = new File(root + "/recognize");
-    private static final int MAXCAPACITY = 100;
-    static int lengthTrainData;
-    static int lengthLabelData;
+    public static String root = Environment.getExternalStorageDirectory().toString();
+    public static File myDir = new File(root + "/recognize");
+    public static final int MAXCAPACITY = 100;
+    private static int lengthTrainData;
+    private static int lengthLabelData;
 
 
 

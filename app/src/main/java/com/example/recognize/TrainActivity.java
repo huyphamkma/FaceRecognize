@@ -49,31 +49,26 @@ import java.util.Map;
 import static org.opencv.objdetect.Objdetect.CASCADE_SCALE_IMAGE;
 
 public class TrainActivity extends AppCompatActivity implements Serializable, CameraBridgeViewBase.CvCameraViewListener2 {
-    Intent intent;
+    private Intent intent;
     private static final String TAG = "Train::Activity";
-    private static final int MAXCAPACITY = 100;
-    CascadeClassifier cascadeClassifier;
-    DetectFaceUtils detectFaceUtils;
-    Mat mRgba, mGray;
-    Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
-    CameraBridgeViewBase cameraBridgeViewBase;
-    Button buttonExit, buttonAdd;
-    ImageView imageView;
-    EditText editTextName;
-    Bitmap bitmapImagePreview;
-    float[] floatValues = new float[160 * 160 * 3];
-    String root = Environment.getExternalStorageDirectory().toString();
-    File myDir = new File(root + "/recognize");
-
-    private TensorFlowInferenceInterface tf;
-    float[] PREDICTIONS = new float[128];
-
-    String[][] arrLabel;
-    int lengthLabel;
+    private CascadeClassifier cascadeClassifier;
+    private DetectFaceUtils detectFaceUtils;
+    private Mat mRgba, mGray;
+    private CameraBridgeViewBase cameraBridgeViewBase;
+    private Button buttonExit, buttonAdd;
+    private ImageView imageView;
+    private EditText editTextName;
+    private Bitmap bitmapImagePreview, bitmapTrain;
+    private float[] floatValues = new float[160 * 160 * 3];
+    private TensorFlowInferenceInterface tfModel;
+    private float[] PREDICTIONS = new float[128];
+    private String[][] arrLabel;
+    private int lengthLabel;
+    private Handler mHandler;
     static {
         System.loadLibrary("tensorflow_inference");
     }
-    Handler mHandler;
+
 
 
 
@@ -105,11 +100,11 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         if(lengthLabel == 0)
             return 1;
         for(int i = 0; i < lengthLabel; i++){
-            if(arrLabel[i][0] == name){
+            if(arrLabel[i][0].equalsIgnoreCase(name)){
                 return Integer.parseInt(arrLabel[i][1]);
             }
         }
-        for(int i = 1; i <= MAXCAPACITY; i++){
+        for(int i = 1; i <= FileUtils.MAXCAPACITY; i++){
             boolean check = true;
             for(int j = 0; j < lengthLabel; j++){
                 if(Integer.parseInt(arrLabel[j][1]) == i) {
@@ -145,11 +140,11 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         editTextName = findViewById(R.id.editTextName);
         imageView = findViewById(R.id.imageView2);
 
-        tf = new TensorFlowInferenceInterface(getAssets(),RecognizeFaceUtils.MODEL_PATH);
-        arrLabel = new String[MAXCAPACITY][2];
+        tfModel = new TensorFlowInferenceInterface(getAssets(),RecognizeFaceUtils.MODEL_PATH);
+        arrLabel = new String[FileUtils.MAXCAPACITY][2];
 
-        if (!myDir.exists()) {
-            myDir.mkdirs();
+        if (!FileUtils.myDir.exists()) {
+            FileUtils.myDir.mkdirs();
         }
         arrLabel = FileUtils.loadLabelData();
         lengthLabel = FileUtils.getLengthLabelData();
@@ -179,16 +174,18 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
             public void onClick(View v) {
                 imageView.setImageBitmap(bitmapImagePreview);
                 String name = editTextName.getText().toString().trim();
+
                 if(!editTextName.getText().toString().isEmpty()){
                     //Resize the image into 160 x 160
 
-                    Bitmap resized_image = ImageUtils.processBitmap(bitmapImagePreview,160);
+                    Bitmap resized_image = ImageUtils.processBitmap(bitmapTrain,160);
 
                     //Normalize the pixels
                     floatValues = ImageUtils.normalizeBitmap(resized_image,160,80.5f,1.0f);
 
-                    PREDICTIONS = RecognizeFaceUtils.predict(tf, floatValues);
+                    PREDICTIONS = RecognizeFaceUtils.predict(tfModel, floatValues);
 
+                    name = name.substring(0,1).toUpperCase() + name.substring(1).toLowerCase();
                     int id = checkName(name);
 
                     FileUtils.writeTrainData(id, PREDICTIONS);
@@ -248,6 +245,11 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
             Rect r = list[0];
             Mat m = mGray.submat(r);
 
+            Mat preview = mRgba.submat(r);
+            Bitmap bitmapPreview= Bitmap.createBitmap(preview.width(), preview.height(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(preview, bitmapPreview);
+            bitmapImagePreview = bitmapPreview;
+
             // tang do tuong phan, can bang sang
             m = ImageUtils.equalizeImage(m);
 
@@ -256,7 +258,7 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
 
             Bitmap bitmap= Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(m, bitmap);
-            bitmapImagePreview = bitmap;
+            bitmapTrain = bitmap;
 
             Message msg = new Message();
             String textTochange = "IMG";
@@ -269,7 +271,7 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         for(int i = 0; i < list.length; i++){
             Imgproc.rectangle(mRgba, new Point(list[i].x, list[i].y),
                     new Point(list[i].x+list[i].width,list[i].y+list[i].height),
-                    FACE_RECT_COLOR,2);
+                    ImageUtils.FACE_RECT_COLOR,2);
         }
 
         return mRgba;
