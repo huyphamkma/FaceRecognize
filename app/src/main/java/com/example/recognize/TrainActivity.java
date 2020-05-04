@@ -80,7 +80,7 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
-                //    loadModelDetect();
+                    //    loadModelDetect();
                     detectFaceUtils = new DetectFaceUtils(getApplication());
                     cascadeClassifier = detectFaceUtils.loadModelDetect();
                     cameraBridgeViewBase.enableView();
@@ -168,7 +168,7 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
                 finish();
             }
         });
-        
+
         buttonAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -233,10 +233,8 @@ public class TrainActivity extends AppCompatActivity implements Serializable, Ca
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
-
         MatOfRect list_face = new MatOfRect();
-
-        cascadeClassifier.detectMultiScale(mGray,list_face,1.1,6,0|CASCADE_SCALE_IMAGE, new Size(70,70), new Size());
+        cascadeClassifier.detectMultiScale(mGray,list_face,1.1,5,CASCADE_SCALE_IMAGE, new Size(70,70), new Size());
 
         Rect[] list = list_face.toArray();
 

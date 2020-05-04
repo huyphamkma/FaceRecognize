@@ -48,6 +48,8 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     private TensorFlowInferenceInterface tfModel;
     private float[] PREDICTIONS = new float[128];
     private float[][] value = new float[FileUtils.MAXCAPACITY][129];
+    private static final double THRESHOLD = 0.2;
+
 
     private Mat mRgba, mGray;
     CameraBridgeViewBase cameraBridgeViewBase;
@@ -190,7 +192,7 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
                 Bitmap bitmapRecognize = Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
                 Utils.matToBitmap(m, bitmapRecognize);
 
-            //    bitmap = bitmapRecognize;
+                //    bitmap = bitmapRecognize;
 
 
                 //Resize the image into 160 x 160
@@ -211,10 +213,10 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
                     }
                 }
 
-             //   String name = labelMap.get(vtMin);
+                //   String name = labelMap.get(vtMin);
                 String name = getName(idMin);
 
-                if (min < 0.3) {
+                if (min < THRESHOLD) {
                     msg.obj += name+"\n";
                 } else {
                     msg.obj += "";
