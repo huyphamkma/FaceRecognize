@@ -144,10 +144,8 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
     protected void onResume() {
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
         } else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
     }
@@ -192,13 +190,12 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
                 Bitmap bitmapRecognize = Bitmap.createBitmap(m.width(), m.height(), Bitmap.Config.ARGB_8888);
                 Utils.matToBitmap(m, bitmapRecognize);
 
-                //    bitmap = bitmapRecognize;
 
 
-                //Resize the image into 160 x 160
+                //Resize anh ve kich thuoc 160 x 160
                 Bitmap resized_image = ImageUtils.processBitmap(bitmapRecognize, 160);
 
-                //Normalize the pixels
+                //Dua cac pixel cua anh ve dang mang float
                 floatValues = ImageUtils.normalizeBitmap(resized_image, 160, 80.5f, 1.0f);
 
                 PREDICTIONS = RecognizeFaceUtils.predict(tfModel, floatValues);
@@ -213,7 +210,6 @@ public class RecognizeActivity extends AppCompatActivity implements CameraBridge
                     }
                 }
 
-                //   String name = labelMap.get(vtMin);
                 String name = getName(idMin);
 
                 if (min < THRESHOLD) {
